@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="km">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ល្បែងស្នេហា - ជាមួយភ្លេង, Popup និង Chat</title>
+    <style>
+      body {
+        font-family: "Khmer OS Battambang", sans-serif;
+        text-align: center;
+        background: linear-gradient(to right, #ffcccc, #ffe6e6);
+        margin: 0;
+        padding-top: 100px;
+      }
+
+      h1 {
+        color: #d6336c;
+        font-size: 2em;
+      }
+
+      .btn {
+        padding: 15px 30px;
+        font-size: 20px;
+        margin: 20px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+      }
+
+      .yes {
+        background-color: #ff4d4d;
+        color: white;
+      }
+
+      .no {
+        background-color: #ccc;
+        color: black;
+        position: absolute;
+        transition: all 0.3s ease;
+      }
+
+      #confession {
+        font-size: 24px;
+        color: #cc0066;
+        margin-top: 50px;
+        display: none;
+        animation: fadeIn 1s ease-in-out;
+      }
+
+      #cuteImage {
+        width: 200px;
+        margin: 20px auto 0 auto;
+        display: none;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: scale(0.8);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      /* Popup message style */
+      #popupMessage {
+        display: none;
+        position: fixed;
+        top: 1%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #ffccd5;
+        padding: 20px 30px;
+        border-radius: 10px;
+        box-shadow: 0 0 10px #d6336c;
+        font-size: 18px;
+        color: #800020;
+        z-index: 1000;
+      }
+      #popupMessage button {
+        margin-top: 5px;
+        padding: 8px 15px;
+        background-color: #d6336c;
+        color: white;
+        border: none;
+        border-radius: 7px;
+        cursor: pointer;
+      }
+
+      /* Chat box style */
+      #chatBox {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 320px;
+        max-height: 400px;
+        background: #fff0f5;
+        border: 2px solid #d6336c;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 0 15px #d6336c;
+        font-family: "Khmer OS Battambang", sans-serif;
+        font-size: 16px;
+        color: #800020;
+        z-index: 1000;
+      }
+      #chatMessages {
+        flex-grow: 1;
+        padding: 10px;
+        background: #fff;
+        border-radius: 8px 8px 0 0;
+        min-height: 200px;
+        max-height: 320px;
+
+        /* បិទ scroll */
+        overflow: hidden;
+        white-space: pre-line; /* បង្ហាញអក្សរលើបន្ទាត់ថ្មី */
+      }
+      #chatMessages div {
+        margin-bottom: 8px;
+        word-wrap: break-word;
+      }
+      #chatMessages .userMsg {
+        text-align: right;
+        color: #d6336c;
+      }
+      #chatMessages .botMsg {
+        text-align: left;
+        color: #800020;
+      }
+      #chatInput {
+        border: none;
+        border-top: 1px solid #d6336c;
+        padding: 10px;
+        font-size: 16px;
+        outline: none;
+        border-radius: 0 0 10px 10px;
+      }
+
+      /* Background music control button */
+      #audioControl {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        background: #d6336c;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 7px;
+        cursor: pointer;
+        font-weight: bold;
+        z-index: 1000;
+        user-select: none;
+      }
+    </style>
+
+    <!-- Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  </head>
+  <body>
+    <h1>តើ​អ្នក​ចូលចិត្ត​ខ្ញុំដែរ​មែនទេ? 😳</h1>
+
+    <!-- Buttons Group -->
+    <div id="buttonGroup">
+      <button class="btn yes" onclick="showLove()">
+        ចាស! ខ្ញុំ​ក៏ចូលចិត្តអ្នកផងដែរ! ❤️
+      </button>
+      <button class="btn no" id="noBtn">ទេ 🙈</button>
+    </div>
+
+    <!-- Confession and Image appear below buttons -->
+    <div id="confession"><span id="typeText"></span></div>
+    <img id="cuteImage" src="src/download.jpg" alt="Cute Love Image" />
+
+    <!-- Love Sound -->
+    <audio id="loveSound" src="src/in-love-116205.mp3"></audio>
+
+    <!-- Background Music -->
+    <audio id="bgMusic" src="src/in-love-116205.mp3" loop></audio>
+    <div id="audioControl" onclick="toggleMusic()">ចាក់ភ្លេង 🎵</div>
+
+    <!-- Popup Message -->
+    <div id="popupMessage">
+      សូមស្វាគមន៍មកកាន់វេបសាយ! ❤️<br />
+      <button onclick="closePopup()">បិទ</button>
+    </div>
+
+    <!-- Chat Box -->
+    <div id="chatBox">
+      <div id="chatMessages"></div>
+      <input
+        id="chatInput"
+        type="text"
+        placeholder="សរសេរសាររបស់អ្នក..."
+        onkeydown="if(event.key==='Enter') sendMessage()"
+      />
+    </div>
+
+    <script>
+      const noBtn = document.getElementById("noBtn");
+      const bgMusic = document.getElementById("bgMusic");
+      const audioControl = document.getElementById("audioControl");
+
+      // ប៊ូតុង "ទេ 🙈" រុញចេញពេល hover
+      noBtn.addEventListener("mouseover", () => {
+        const maxX = window.innerWidth - noBtn.offsetWidth;
+        const maxY = window.innerHeight - noBtn.offsetHeight;
+        const i = Math.floor(Math.random() * maxX);
+        const j = Math.floor(Math.random() * maxY);
+        noBtn.style.left = i + "px";
+        noBtn.style.top = j + "px";
+      });
+
+      // បង្ហាញសារ + រូបភាព + សម្លេង + ផ្កាយ
+      function showLove() {
+        noBtn.style.display = "none";
+
+        const text = "🥰 ខ្ញុំស្រលាញ់អ្នកចេញពីបេះដូង! 💌";
+        let i = 0;
+        const typeText = document.getElementById("typeText");
+        typeText.innerHTML = "";
+        document.getElementById("confession").style.display = "block";
+        document.getElementById("cuteImage").style.display = "block";
+
+        document.getElementById("loveSound").play();
+
+        function typeLetter() {
+          if (i < text.length) {
+            typeText.innerHTML += text.charAt(i);
+            i++;
+            setTimeout(typeLetter, 70);
+          }
+        }
+        typeLetter();
+
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.6 },
+        });
+      }
+
+      // Toggle background music play/pause
+      function toggleMusic() {
+        if (bgMusic.paused) {
+          bgMusic.volume = 0.3;
+          bgMusic.play();
+          audioControl.textContent = "បិទភ្លេង 🔇";
+        } else {
+          bgMusic.pause();
+          audioControl.textContent = "ចាក់ភ្លេង 🎵";
+        }
+      }
+
+      // Popup control
+      function showPopup() {
+        document.getElementById("popupMessage").style.display = "block";
+      }
+      function closePopup() {
+        document.getElementById("popupMessage").style.display = "none";
+      }
+
+      // Show popup after 1 second on page load
+      window.onload = () => {
+        setTimeout(showPopup, 1000);
+      };
+
+      // Chat box functions
+      function sendMessage() {
+        const input = document.getElementById("chatInput");
+        const messages = document.getElementById("chatMessages");
+        const msg = input.value.trim();
+        if (msg === "") return;
+
+        // Show user's message
+        const userMsg = document.createElement("div");
+        userMsg.classList.add("userMsg");
+        userMsg.textContent = "អ្នក៖ " + msg;
+        messages.appendChild(userMsg);
+
+        input.value = "";
+
+        // Simulate bot reply
+        setTimeout(() => {
+          const replyMsg = document.createElement("div");
+          replyMsg.classList.add("botMsg");
+          replyMsg.textContent = "Bot: សូមអរគុណសម្រាប់សាររបស់អ្នក 💕";
+          messages.appendChild(replyMsg);
+          messages.scrollTop = messages.scrollHeight; // scroll down បើមាន scroll
+        }, 1000);
+      }
+    </script>
+  </body>
+</html>
